@@ -1,10 +1,56 @@
 #![no_std]
 #![no_main]
+#![feature(type_alias_impl_trait)]
+
 
 use esp_backtrace as _;
 use esp_println::println;
-use hal::{clock::ClockControl, peripherals::Peripherals, prelude::*, timer::TimerGroup, Rtc};
 use log::info;
+
+use hal::{
+    clock::{ClockControl, CpuClock},
+    i2c::I2C,
+    peripherals::{Interrupt, Peripherals, I2C0},
+    prelude::{_fugit_RateExtU32, *},
+    Rng,
+    Rtc,
+    systimer::SystemTimer,
+    timer::TimerGroup,
+    IO,
+    embassy,
+    interrupt,
+    spi,
+    delay::Delay,
+};
+
+use embedded_graphics::{
+    pixelcolor::Rgb565, prelude::*,
+};
+use display_interface_spi::SPIInterfaceNoCS;
+use mipidsi::{ColorOrder, Orientation};
+
+use embedded_svc::wifi::{ClientConfiguration, Configuration, Wifi};
+use esp_wifi::wifi::{WifiController, WifiDevice, WifiEvent, WifiMode, WifiState};
+use esp_wifi::{initialize, EspWifiInitFor};
+
+use embassy_executor::Executor;
+use embassy_time::{Duration, Timer};
+use embassy_executor::_export::StaticCell;
+use embassy_net::tcp::TcpSocket;
+use embassy_net::{Config, Stack, StackResources, dns::DnsQueryType};
+
+use rust_mqtt::{
+    client::{client::MqttClient, client_config::{ClientConfig}},
+    utils::rng_generator::CountingRng,
+};
+
+use crate::bmp180_async::Bmp180;
+mod bmp180_async;
+
+use heapless::String;
+use core::fmt::Write;
+
+
 
 #[entry]
 fn main() -> ! {
