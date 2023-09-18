@@ -44,6 +44,7 @@ use embassy_time::{Duration, Timer};
 // mqtt imports
 use rust_mqtt::{
     client::{client::MqttClient, client_config::{ClientConfig}},
+    packet::v5::reason_codes::ReasonCode,
     utils::rng_generator::CountingRng,
 };
 
@@ -100,6 +101,7 @@ fn main() -> ! {
         &clocks,
         &mut system.peripheral_clock_control,
     );
+    let timer1 = timer_group1.timer0;
     
     rtc.swd.disable();
     rtc.rwdt.disable();
@@ -139,7 +141,7 @@ fn main() -> ! {
 
     let init = initialize(
         EspWifiInitFor::Wifi,
-        timer,
+        timer1,
         Rng::new(peripherals.RNG),
         system.radio_clock_control,
         &clocks,
@@ -184,9 +186,10 @@ fn main() -> ! {
     let executor = EXECUTOR.init(Executor::new());
     executor.run(|spawner| {
         spawner.spawn(connection(controller)).ok();
+        spawner.spawn(net_task(&stack)).ok();
+        spawner.spawn(task(&stack, i2c)).ok();
     });
 
-    loop {}
 }
 
 #[embassy_executor::task]
@@ -241,4 +244,121 @@ async fn connection(mut controller: WifiController<'static>) {
 #[embassy_executor::task]
 async fn net_task(stack: &'static Stack<WifiDevice<'static>>) {
     stack.run().await
+}
+
+#[embassy_executor::task]
+async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0>) {
+    let mut rx_buffer = [0; 4096];
+    let mut tx_buffer = [0; 4096];
+
+    //wait until wifi connected
+    loop {
+        if stack.is_link_up() {
+            break;
+        }
+        Timer::after(Duration::from_millis(500)).await;
+    }
+
+    println!("Waiting to get IP address...");
+    loop {
+        if let Some(config) = stack.config_v4() {
+            println!("Got IP: {}", config.address); //dhcp IP address
+            break;
+        }
+        Timer::after(Duration::from_millis(500)).await;
+    }
+
+    loop {
+        Timer::after(Duration::from_millis(1_000)).await;
+
+        let mut socket = TcpSocket::new(&stack, &mut rx_buffer, &mut tx_buffer);
+
+        socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
+
+        let address = match stack
+            .dns_query(ENDPOINT, DnsQueryType::A)
+            .await
+            .map(|a| a[0])
+        {
+            Ok(address) => address,
+            Err(e) => {
+                println!("DNS lookup error: {e:?}");
+                continue;
+            }
+        };
+
+        let remote_endpoint = (address, 1883);
+        println!("connecting...");
+        let connection = socket.connect(remote_endpoint).await;
+        if let Err(e) = connection {
+            println!("connect error: {:?}", e);
+            continue;
+        }
+        println!("connected!");
+
+        let mut config = ClientConfig::new(
+            rust_mqtt::client::client_config::MqttVersion::MQTTv5,
+            CountingRng(20000),
+        );
+        config.add_max_subscribe_qos(rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1);
+        config.add_client_id(CLIENT_ID);
+        config.max_packet_size = 100;
+        let mut recv_buffer = [0; 80];
+        let mut write_buffer = [0; 80];
+
+        let mut client =
+            MqttClient::<_, 5, _>::new(socket, &mut write_buffer, 80, &mut recv_buffer, 80, config);
+
+        match client.connect_to_broker().await {
+            Ok(()) => {}
+            Err(mqtt_error) => match mqtt_error {
+                ReasonCode::NetworkError => {
+                    println!("MQTT Network Error");
+                    continue;
+                }
+                _ => {
+                    println!("Other MQTT Error: {:?}", mqtt_error);
+                    continue;
+                }
+            },
+        }
+
+        let mut bmp = Bmp180::new(i2c, sleep).await;
+        loop {
+            bmp.measure().await;
+            let temperature = bmp.get_temperature();
+            println!("Current temperature: {}", temperature);
+
+            // Convert temperature into String
+            let mut temperature_string: String<32> = String::new();
+            write!(temperature_string, "{:.2}", temperature).expect("write! failed!");
+
+            match client
+                .send_message(
+                    "temperaturee/1",
+                    temperature_string.as_bytes(),
+                    rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
+                    true,
+                )
+                .await
+            {
+                Ok(()) => {}
+                Err(mqtt_error) => match mqtt_error {
+                    ReasonCode::NetworkError => {
+                        println!("MQTT Network Error");
+                        continue;
+                    }
+                    _ => {
+                        println!("Other MQTT Error: {:?}", mqtt_error);
+                        continue;
+                    }
+                },
+            }
+            Timer::after(Duration::from_millis(3000)).await;
+        }
+    }
+}
+
+pub async fn sleep(millis: u32) {
+    Timer::after(Duration::from_millis(millis as u64)).await;
 }
