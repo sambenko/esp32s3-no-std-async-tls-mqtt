@@ -113,7 +113,7 @@ fn main() -> ! {
     let sclk = io.pins.gpio7;
     let mosi = io.pins.gpio6;
     let mut backlight = io.pins.gpio45.into_push_pull_output();
-    backlight.set_high().unwrap();
+    backlight.set_high().expect("Failed to set backlight high");
 
     let spi = spi::Spi::new_no_cs_no_miso(
         peripherals.SPI2,
@@ -134,9 +134,9 @@ fn main() -> ! {
         .with_orientation(Orientation::PortraitInverted(false))
         .with_color_order(ColorOrder::Bgr)
         .init(&mut delay, Some(reset))
-        .unwrap();
+        .expect("Display failed to initialize");
 
-    display.clear(Rgb565::WHITE).unwrap();
+    display.clear(Rgb565::WHITE).expect("Failed to clear display");
 
     let init = initialize(
         EspWifiInitFor::Wifi,
@@ -151,6 +151,39 @@ fn main() -> ! {
         &clocks,
         timer0,
     );
+
+    let (wifi, _) = peripherals.RADIO.split();
+    let (wifi_interface, controller) =
+        match esp_wifi::wifi::new_with_mode(&init, wifi, WifiMode::Sta) {
+            Ok((wifi_interface, controller)) => (wifi_interface, controller),
+            Err(..) => panic!("WiFi mode Error!"),
+        };
+
+    let i2c = I2C::new(
+        peripherals.I2C0,
+        io.pins.gpio41,
+        io.pins.gpio40,
+        100u32.kHz(),
+        &mut system.peripheral_clock_control,
+        &clocks,
+    );
+
+    let config = Config::dhcpv4(Default::default());
+
+    let seed = 69420;
+
+    let stack = &*singleton!(Stack::new(
+        wifi_interface,
+        config,
+        singleton!(StackResources::<3>::new()),
+        seed
+    ));
+
+    interrupt::enable(Interrupt::I2C_EXT0, interrupt::Priority::Priority1)
+        .expect("Invalid Interrupt Priority Error");
+
+    let executor = EXECUTOR.init(Executor::new());
+    
 
     loop {}
 }
