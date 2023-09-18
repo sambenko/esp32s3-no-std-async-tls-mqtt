@@ -237,3 +237,8 @@ async fn connection(mut controller: WifiController<'static>) {
         }
     }
 }
+
+#[embassy_executor::task]
+async fn net_task(stack: &'static Stack<WifiDevice<'static>>) {
+    stack.run().await
+}
