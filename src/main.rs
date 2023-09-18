@@ -17,8 +17,10 @@ use hal::{
     timer::TimerGroup,
     Rng, 
     Rtc, 
-    IO, 
+    IO,
+    Delay,
     {embassy, interrupt},
+    spi,
 };
 
 //display imports 
@@ -105,6 +107,50 @@ fn main() -> ! {
     
     esp_println::logger::init_logger_from_env();
     info!("Logger is setup");
+
+    let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
+
+    let sclk = io.pins.gpio7;
+    let mosi = io.pins.gpio6;
+    let mut backlight = io.pins.gpio45.into_push_pull_output();
+    backlight.set_high().unwrap();
+
+    let spi = spi::Spi::new_no_cs_no_miso(
+        peripherals.SPI2,
+        sclk,
+        mosi,
+        60u32.MHz(),
+        spi::SpiMode::Mode0,
+        &mut system.peripheral_clock_control,
+        &clocks,
+    );
+    
+    let di = SPIInterfaceNoCS::new(spi, io.pins.gpio4.into_push_pull_output());
+    let reset = io.pins.gpio48.into_push_pull_output();
+    let mut delay = Delay::new(&clocks);
+
+    let mut display = mipidsi::Builder::ili9342c_rgb565(di)
+        .with_display_size(320, 240)
+        .with_orientation(Orientation::PortraitInverted(false))
+        .with_color_order(ColorOrder::Bgr)
+        .init(&mut delay, Some(reset))
+        .unwrap();
+
+    display.clear(Rgb565::WHITE).unwrap();
+
+    let init = initialize(
+        EspWifiInitFor::Wifi,
+        timer,
+        Rng::new(peripherals.RNG),
+        system.radio_clock_control,
+        &clocks,
+    )
+    .expect("Failed to initialize Wifi");
+
+    embassy::init(
+        &clocks,
+        timer0,
+    );
 
     loop {}
 }
