@@ -13,7 +13,6 @@ use hal::{
     i2c::I2C,
     peripherals::{Interrupt, Peripherals, I2C0},
     prelude::{_fugit_RateExtU32, *},
-    systimer::SystemTimer,
     timer::TimerGroup,
     Rng, 
     Rtc, 
@@ -183,7 +182,58 @@ fn main() -> ! {
         .expect("Invalid Interrupt Priority Error");
 
     let executor = EXECUTOR.init(Executor::new());
-    
+    executor.run(|spawner| {
+        spawner.spawn(connection(controller)).ok();
+    });
 
     loop {}
+}
+
+#[embassy_executor::task]
+async fn connection(mut controller: WifiController<'static>) {
+    println!("start connection task");
+    println!("Device capabilities: {:?}", controller.get_capabilities());
+    loop {
+        match esp_wifi::wifi::get_wifi_state() {
+            WifiState::StaConnected => {
+                // wait until we're no longer connected
+                controller.wait_for_event(WifiEvent::StaDisconnected).await;
+                Timer::after(Duration::from_millis(5000)).await
+            }
+            _ => {}
+        }
+        if !matches!(controller.is_started(), Ok(true)) {
+            let client_config = Configuration::Client(ClientConfiguration {
+                ssid: SSID.into(),
+                password: PASSWORD.into(),
+                ..Default::default()
+            });
+
+            match controller.set_configuration(&client_config) {
+                Ok(()) => {}
+                Err(e) => {
+                    println!("Failed to connect to wifi: {e:?}");
+                    continue;
+                }
+            }
+            println!("Starting wifi");
+            match controller.start().await {
+                Ok(()) => {}
+                Err(e) => {
+                    println!("Failed to connect to wifi: {e:?}");
+                    continue;
+                }
+            }
+            println!("Wifi started!");
+        }
+        println!("About to connect...");
+
+        match controller.connect().await {
+            Ok(_) => println!("Wifi connected!"),
+            Err(e) => {
+                println!("Failed to connect to wifi: {e:?}");
+                Timer::after(Duration::from_millis(5000)).await
+            }
+        }
+    }
 }
