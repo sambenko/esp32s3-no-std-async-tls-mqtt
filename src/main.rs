@@ -74,17 +74,6 @@ macro_rules! singleton {
 #[entry]
 fn main() -> ! {
     let peripherals = Peripherals::take();
-
-    let mut system = peripherals.SYSTEM.split();
-    let clocks = ClockControl::configure(system.clock_control, CpuClock::Clock240MHz).freeze();
-    let mut rtc = Rtc::new(peripherals.RTC_CNTL);
-
-    
-    rtc.swd.disable();
-
-    rtc.rwdt.disable();
-
-    let peripherals = Peripherals::take();
     let mut system = peripherals.SYSTEM.split();
     let clocks = ClockControl::configure(system.clock_control, CpuClock::Clock240MHz).freeze();
     let mut rtc = Rtc::new(peripherals.RTC_CNTL);
