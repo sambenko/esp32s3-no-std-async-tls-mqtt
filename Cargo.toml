@@ -25,6 +25,8 @@ embedded-can       = { version = "0.4.1" }
 static_cell       = "1.1.0"
 rust-mqtt = { version = "0.1.5", default-features = false }
 
+bme680 = "0.6.0"
+
 display-interface-spi = "0.4"
 embedded-graphics = "0.8.1"
 mipidsi = "0.7.1"

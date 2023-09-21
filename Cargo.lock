@@ -126,6 +126,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4682ae6287fcf752ecaabbfcc7b6f9b72aa33933dc23a554d853aea8eea8635"
 
 [[package]]
+name = "bme680"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7c32c5b6119009885390651a97833af8cd0ad87bd4528bec9c8c0554778ef43"
+dependencies = [
+ "bitflags 1.3.2",
+ "embedded-hal 0.2.7",
+ "log",
+]
+
+[[package]]
 name = "byte-slice-cast"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -737,6 +748,7 @@ dependencies = [
 name = "esp32s3_no_std_async_mqtt"
 version = "0.1.0"
 dependencies = [
+ "bme680",
  "display-interface-spi",
  "embassy-executor",
  "embassy-net",
