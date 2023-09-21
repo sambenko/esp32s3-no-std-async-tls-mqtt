@@ -2,6 +2,8 @@
 #![no_main]
 #![feature(type_alias_impl_trait)]
 
+use core::time::Duration as CoreDuration;
+
 // peripherals imports
 use hal::{
     clock::{ClockControl, CpuClock},
@@ -39,6 +41,8 @@ use rust_mqtt::{
     packet::v5::reason_codes::ReasonCode,
     utils::rng_generator::CountingRng,
 };
+
+use bme680::*;
 
 use heapless::String;
 use core::fmt::Write;
@@ -121,7 +125,7 @@ fn main() -> ! {
     
     // let di = SPIInterfaceNoCS::new(spi, io.pins.gpio4.into_push_pull_output());
     // let reset = io.pins.gpio48.into_push_pull_output();
-    // let mut delay = Delay::new(&clocks);
+    let mut delay = Delay::new(&clocks);
 
     // let mut display = mipidsi::Builder::ili9342c_rgb565(di)
     //     .with_display_size(320, 240)
@@ -166,7 +170,7 @@ fn main() -> ! {
     executor.run(|spawner| {
         spawner.spawn(connection(controller)).ok();
         spawner.spawn(net_task(&stack)).ok();
-        spawner.spawn(task(&stack, i2c)).ok();
+        spawner.spawn(task(&stack, i2c, delay)).ok();
     });
 }
 
@@ -225,7 +229,7 @@ async fn net_task(stack: &'static Stack<WifiDevice<'static>>) {
 }
 
 #[embassy_executor::task]
-async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0>) {
+async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0>, mut delay:Delay) {
     let mut rx_buffer = [0; 4096];
     let mut tx_buffer = [0; 4096];
 
@@ -301,10 +305,28 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
             },
         }
 
-        let mut bmp = Bmp180::new(i2c, sleep).await;
+        //initialize BME680
+        let mut bme = Bme680::init(i2c, &mut delay, I2CAddress::Primary).expect("Failed to initialize Bme680");
+        let settings = SettingsBuilder::new()
+            .with_humidity_oversampling(OversamplingSetting::OS2x)
+            .with_pressure_oversampling(OversamplingSetting::OS4x)
+            .with_temperature_oversampling(OversamplingSetting::OS8x)
+            .with_temperature_filter(IIRFilterSize::Size3)
+            .with_gas_measurement(CoreDuration::from_millis(1500), 320, 25)
+            .with_run_gas(true)
+            .build();
+        bme.set_sensor_settings(&mut delay, settings).expect("Failed to set the settings");
+
         loop {
-            bmp.measure().await;
-            let temperature = bmp.get_temperature();
+            bme.set_sensor_mode(&mut delay, PowerMode::ForcedMode).expect("Failed to set sensor mode");
+
+            let profile_duration = bme.get_profile_dur(&settings.0).expect("Failed to get profile duration");
+            let duration_ms = profile_duration.as_millis() as u32;
+            delay.delay_ms(duration_ms);
+
+            let (data, _state) = bme.get_sensor_data(&mut delay).expect("Failed to get sensor data");
+            
+            let temperature = data.temperature_celsius();
             println!("Current temperature: {}", temperature);
 
             // Convert temperature into String
