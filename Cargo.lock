@@ -4,9 +4,9 @@ version = 3
 
 [[package]]
 name = "aho-corasick"
-version = "1.0.5"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c378d78423fdad8089616f827526ee33c19f2fddbd5de1629152c9593ba4783"
+checksum = "ea5d730647d4fadd988536d06fecce94b7b4f2a7efdae548f1cf4b63205518ab"
 dependencies = [
  "memchr",
 ]
@@ -578,7 +578,7 @@ dependencies = [
 [[package]]
 name = "esp-wifi"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-wifi#fbb8417fc450ec0701067b36629770c11338231c"
+source = "git+https://github.com/esp-rs/esp-wifi#b54310ece09141d116c94f64ff8559810c64b6be"
 dependencies = [
  "atomic-polyfill 1.0.3",
  "critical-section",
@@ -608,7 +608,7 @@ dependencies = [
 [[package]]
 name = "esp-wifi-sys"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-wifi#fbb8417fc450ec0701067b36629770c11338231c"
+source = "git+https://github.com/esp-rs/esp-wifi#b54310ece09141d116c94f64ff8559810c64b6be"
 dependencies = [
  "anyhow",
 ]
