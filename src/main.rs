@@ -40,10 +40,6 @@ use rust_mqtt::{
     utils::rng_generator::CountingRng,
 };
 
-// bmp180 imports
-use crate::bmp180_async::Bmp180;
-mod bmp180_async;
-
 use heapless::String;
 use core::fmt::Write;
 
