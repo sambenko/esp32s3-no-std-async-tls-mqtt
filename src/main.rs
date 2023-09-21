@@ -2,11 +2,6 @@
 #![no_main]
 #![feature(type_alias_impl_trait)]
 
-
-use esp_backtrace as _;
-use esp_println::println;
-use log::info;
-
 // peripherals imports
 use hal::{
     clock::{ClockControl, CpuClock},
@@ -14,12 +9,8 @@ use hal::{
     peripherals::{Interrupt, Peripherals, I2C0},
     prelude::{_fugit_RateExtU32, *},
     timer::TimerGroup,
-    Rng, 
-    Rtc, 
-    IO,
-    Delay,
+    Rng, Rtc, IO, Delay, spi,
     {embassy, interrupt},
-    spi,
 };
 
 //display imports 
@@ -38,7 +29,8 @@ use esp_wifi::{initialize, EspWifiInitFor};
 use embassy_executor::Executor;
 use embassy_executor::_export::StaticCell;
 use embassy_net::tcp::TcpSocket;
-use embassy_net::{Config, Stack, StackResources, dns::DnsQueryType};
+use embassy_net::dns::DnsQueryType;
+use embassy_net::{Config, Stack, StackResources};
 use embassy_time::{Duration, Timer};
 
 // mqtt imports
@@ -54,6 +46,10 @@ mod bmp180_async;
 
 use heapless::String;
 use core::fmt::Write;
+
+use esp_backtrace as _;
+use esp_println::println;
+use log::info;
 
 static EXECUTOR: StaticCell<Executor> = StaticCell::new();
 
@@ -74,59 +70,27 @@ macro_rules! singleton {
 #[entry]
 fn main() -> ! {
     let peripherals = Peripherals::take();
+
     let mut system = peripherals.SYSTEM.split();
     let clocks = ClockControl::configure(system.clock_control, CpuClock::Clock240MHz).freeze();
     let mut rtc = Rtc::new(peripherals.RTC_CNTL);
 
-    let timer_group0 = TimerGroup::new(
-        peripherals.TIMG0,
-        &clocks,
-        &mut system.peripheral_clock_control,
-    );
-    let timer0 = timer_group0.timer0;
-
-    let timer_group1 = TimerGroup::new(
+    let timer1 = TimerGroup::new(
         peripherals.TIMG1,
         &clocks,
         &mut system.peripheral_clock_control,
-    );
-    let timer1 = timer_group1.timer0;
-    
+    )
+    .timer0;
+
+    let timer0 = TimerGroup::new(
+        peripherals.TIMG0,
+        &clocks,
+        &mut system.peripheral_clock_control,
+    )
+    .timer0;
+
     rtc.swd.disable();
     rtc.rwdt.disable();
-    
-    esp_println::logger::init_logger_from_env();
-    info!("Logger is setup");
-
-    let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
-
-    let sclk = io.pins.gpio7;
-    let mosi = io.pins.gpio6;
-    let mut backlight = io.pins.gpio45.into_push_pull_output();
-    backlight.set_high().expect("Failed to set backlight high");
-
-    let spi = spi::Spi::new_no_cs_no_miso(
-        peripherals.SPI2,
-        sclk,
-        mosi,
-        60u32.MHz(),
-        spi::SpiMode::Mode0,
-        &mut system.peripheral_clock_control,
-        &clocks,
-    );
-    
-    let di = SPIInterfaceNoCS::new(spi, io.pins.gpio4.into_push_pull_output());
-    let reset = io.pins.gpio48.into_push_pull_output();
-    let mut delay = Delay::new(&clocks);
-
-    let mut display = mipidsi::Builder::ili9342c_rgb565(di)
-        .with_display_size(320, 240)
-        .with_orientation(Orientation::PortraitInverted(false))
-        .with_color_order(ColorOrder::Bgr)
-        .init(&mut delay, Some(reset))
-        .expect("Display failed to initialize");
-
-    display.clear(Rgb565::WHITE).expect("Failed to clear display");
 
     let init = initialize(
         EspWifiInitFor::Wifi,
@@ -142,13 +106,43 @@ fn main() -> ! {
         timer0,
     );
 
+    let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
+
+    // let sclk = io.pins.gpio7;
+    // let mosi = io.pins.gpio6;
+    // let mut backlight = io.pins.gpio45.into_push_pull_output();
+    // backlight.set_high().expect("Failed to set backlight high");
+
+    // let spi = spi::Spi::new_no_cs_no_miso(
+    //     peripherals.SPI2,
+    //     sclk,
+    //     mosi,
+    //     60u32.MHz(),
+    //     spi::SpiMode::Mode0,
+    //     &mut system.peripheral_clock_control,
+    //     &clocks,
+    // );
+    
+    // let di = SPIInterfaceNoCS::new(spi, io.pins.gpio4.into_push_pull_output());
+    // let reset = io.pins.gpio48.into_push_pull_output();
+    // let mut delay = Delay::new(&clocks);
+
+    // let mut display = mipidsi::Builder::ili9342c_rgb565(di)
+    //     .with_display_size(320, 240)
+    //     .with_orientation(Orientation::PortraitInverted(false))
+    //     .with_color_order(ColorOrder::Bgr)
+    //     .init(&mut delay, Some(reset))
+    //     .expect("Display failed to initialize");
+
+    // display.clear(Rgb565::WHITE).expect("Failed to clear display");
+
     let (wifi, _) = peripherals.RADIO.split();
     let (wifi_interface, controller) =
         match esp_wifi::wifi::new_with_mode(&init, wifi, WifiMode::Sta) {
             Ok((wifi_interface, controller)) => (wifi_interface, controller),
             Err(..) => panic!("WiFi mode Error!"),
         };
-
+    
     let i2c = I2C::new(
         peripherals.I2C0,
         io.pins.gpio41,
@@ -160,7 +154,7 @@ fn main() -> ! {
 
     let config = Config::dhcpv4(Default::default());
 
-    let seed = 69420;
+    let seed = 1234;
 
     let stack = &*singleton!(Stack::new(
         wifi_interface,
@@ -178,7 +172,6 @@ fn main() -> ! {
         spawner.spawn(net_task(&stack)).ok();
         spawner.spawn(task(&stack, i2c)).ok();
     });
-
 }
 
 #[embassy_executor::task]
@@ -324,7 +317,7 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
 
             match client
                 .send_message(
-                    "temperaturee/1",
+                    "Tempeeratuuree/1",
                     temperature_string.as_bytes(),
                     rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
                     true,
