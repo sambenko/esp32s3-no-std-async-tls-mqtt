@@ -42,6 +42,9 @@ use rust_mqtt::{
     utils::rng_generator::CountingRng,
 };
 
+use esp_mbedtls::{asynch::Session, set_debug, Mode, TlsVersion};
+use esp_mbedtls::{Certificates, X509};
+
 use bme680::*;
 
 use heapless::String;
@@ -55,8 +58,12 @@ static EXECUTOR: StaticCell<Executor> = StaticCell::new();
 
 const SSID: &str = env!("SSID");
 const PASSWORD: &str = env!("PASSWORD");
+const CERT: &'static str = concat!(include_str!("../secrets/AmazonRootCA1.pem"), "\0");
+const CLIENT_CERT: &'static str = concat!(include_str!("../secrets/device-certificate.pem.crt"), "\0");
+const PRIVATE_KEY: &'static str = concat!(include_str!("../secrets/private.pem.key"), "\0");
 const ENDPOINT: &'static str = include_str!("../secrets/endpoint.txt");
 const CLIENT_ID: &'static str = include_str!("../secrets/client_id.txt");
+
 
 macro_rules! singleton {
     ($val:expr) => {{
@@ -269,7 +276,7 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
             }
         };
 
-        let remote_endpoint = (address, 1883);
+        let remote_endpoint = (address, 8883);
         println!("connecting...");
         let connection = socket.connect(remote_endpoint).await;
         if let Err(e) = connection {
@@ -277,6 +284,34 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
             continue;
         }
         println!("connected!");
+
+        set_debug(0);
+
+        let certificates = Certificates {
+            ca_chain: X509::pem(CERT.as_bytes(),
+            )
+            .ok(),
+            certificate: X509::pem(CLIENT_CERT.as_bytes())
+                .ok(),
+            private_key: X509::pem(PRIVATE_KEY.as_bytes())
+                .ok(),
+            password: None,
+        };
+
+        let tls: Session<_, 4096> = Session::new(
+            &mut socket,
+            ENDPOINT,
+            Mode::Client,
+            TlsVersion::Tls1_3,
+            certificates,
+        )
+        .unwrap();
+
+        println!("Start tls connect");
+
+        let connected_tls = tls.connect().await.expect("TLS connect failed");
+    
+        println!("Tls connected!");
 
         let mut config = ClientConfig::new(
             rust_mqtt::client::client_config::MqttVersion::MQTTv5,
@@ -289,7 +324,7 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
         let mut write_buffer = [0; 80];
 
         let mut client =
-            MqttClient::<_, 5, _>::new(socket, &mut write_buffer, 80, &mut recv_buffer, 80, config);
+            MqttClient::<_, 5, _>::new(connected_tls, &mut write_buffer, 80, &mut recv_buffer, 80, config);
 
         match client.connect_to_broker().await {
             Ok(()) => {}
