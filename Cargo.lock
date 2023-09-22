@@ -555,6 +555,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "esp-mbedtls"
+version = "0.1.0"
+source = "git+https://github.com/esp-rs/esp-mbedtls.git#a18a0b1ccd9561b2a56a08d18db54c5e586fd97e"
+dependencies = [
+ "embedded-io 0.4.0",
+ "esp-mbedtls-sys",
+ "log",
+]
+
+[[package]]
+name = "esp-mbedtls-sys"
+version = "0.1.0"
+source = "git+https://github.com/esp-rs/esp-mbedtls.git#a18a0b1ccd9561b2a56a08d18db54c5e586fd97e"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
 name = "esp-println"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -761,6 +779,7 @@ dependencies = [
  "embedded-io 0.5.0",
  "embedded-svc",
  "esp-backtrace",
+ "esp-mbedtls",
  "esp-println",
  "esp-wifi",
  "esp32s3-hal",
