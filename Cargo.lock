@@ -70,9 +70,9 @@ dependencies = [
 
 [[package]]
 name = "atomic-waker"
-version = "1.1.1"
+version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1181e1e0d1fce796a03db1ae795d67167da795f9cf4a39c37589e85ef57f26d3"
+checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
 name = "autocfg"
@@ -607,7 +607,7 @@ dependencies = [
 [[package]]
 name = "esp-wifi"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-wifi#b54310ece09141d116c94f64ff8559810c64b6be"
+source = "git+https://github.com/esp-rs/esp-wifi#16afb0fe3c46e2ccf698bf52bfec5230ffad1cad"
 dependencies = [
  "atomic-polyfill 1.0.3",
  "critical-section",
@@ -626,6 +626,7 @@ dependencies = [
  "esp32s3-hal",
  "fugit",
  "heapless",
+ "libm",
  "linked_list_allocator",
  "log",
  "num-derive",
@@ -637,7 +638,7 @@ dependencies = [
 [[package]]
 name = "esp-wifi-sys"
 version = "0.1.0"
-source = "git+https://github.com/esp-rs/esp-wifi#b54310ece09141d116c94f64ff8559810c64b6be"
+source = "git+https://github.com/esp-rs/esp-wifi#16afb0fe3c46e2ccf698bf52bfec5230ffad1cad"
 dependencies = [
  "anyhow",
 ]
@@ -973,6 +974,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "libm"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7012b1bbb0719e1097c47611d3898568c546d597c2e74d66f6087edd5233ff4"
+
+[[package]]
 name = "linked_list_allocator"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1266,9 +1273,9 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "semver"
-version = "1.0.18"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0293b4b29daaf487284529cc2f5675b8e57c61f70167ba415a463651fd6a918"
+checksum = "ad977052201c6de01a8ef2aa3378c4bd23217a056337d1d6da40468d267a4fb0"
 
 [[package]]
 name = "serde"
