@@ -59,8 +59,8 @@ static EXECUTOR: StaticCell<Executor> = StaticCell::new();
 const SSID: &str = env!("SSID");
 const PASSWORD: &str = env!("PASSWORD");
 const CERT: &'static str = concat!(include_str!("../secrets/AmazonRootCA1.pem"), "\0");
-const CLIENT_CERT: &'static str = concat!(include_str!("../secrets/device-certificate.pem.crt"), "\0");
-const PRIVATE_KEY: &'static str = concat!(include_str!("../secrets/private.pem.key"), "\0");
+const CLIENT_CERT: &'static str = concat!(include_str!("../secrets/VendingMachine.pem.crt"), "\0");
+const PRIVATE_KEY: &'static str = concat!(include_str!("../secrets/VendingMachine-private.pem.key"), "\0");
 const ENDPOINT: &'static str = include_str!("../secrets/endpoint.txt");
 const CLIENT_ID: &'static str = include_str!("../secrets/client_id.txt");
 
@@ -319,12 +319,12 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
         );
         config.add_max_subscribe_qos(rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1);
         config.add_client_id(CLIENT_ID);
-        config.max_packet_size = 100;
-        let mut recv_buffer = [0; 80];
-        let mut write_buffer = [0; 80];
+        config.max_packet_size = 149504;
+        let mut recv_buffer = [0; 4096];
+        let mut write_buffer = [0; 4096];
 
         let mut client =
-            MqttClient::<_, 5, _>::new(connected_tls, &mut write_buffer, 80, &mut recv_buffer, 80, config);
+            MqttClient::<_, 5, _>::new(connected_tls, &mut write_buffer, 4096, &mut recv_buffer, 4096, config);
 
         match client.connect_to_broker().await {
             Ok(()) => {}
@@ -368,10 +368,15 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
             let mut temperature_string: String<32> = String::new();
             write!(temperature_string, "{:.2}", temperature).expect("write! failed!");
 
+            let payload = temperature_string.as_bytes();
+
+            // Print the payload size before sending
+            println!("Sending payload of size: {} bytes", payload.len());
+
             match client
                 .send_message(
-                    "Tempeeratuuree/1",
-                    temperature_string.as_bytes(),
+                    "Temperature/1",
+                    payload,
                     rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
                     true,
                 )
