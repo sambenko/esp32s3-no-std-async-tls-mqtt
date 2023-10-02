@@ -11,16 +11,9 @@ use hal::{
     peripherals::{Interrupt, Peripherals, I2C0},
     prelude::{_fugit_RateExtU32, *},
     timer::TimerGroup,
-    Rng, Rtc, IO, Delay, spi,
+    Rng, Rtc, IO, Delay,
     {embassy, interrupt},
 };
-
-//display imports 
-use embedded_graphics::{
-    pixelcolor::Rgb565, prelude::*,
-};
-use display_interface_spi::SPIInterfaceNoCS;
-use mipidsi::{ColorOrder, Orientation};
 
 //wifi imports
 use embedded_svc::wifi::{ClientConfiguration, Configuration, Wifi};
@@ -37,7 +30,7 @@ use embassy_time::{Duration, Timer};
 
 // mqtt imports
 use rust_mqtt::{
-    client::{client::MqttClient, client_config::{ClientConfig}},
+    client::{client::MqttClient, client_config::ClientConfig},
     packet::v5::reason_codes::ReasonCode,
     utils::rng_generator::CountingRng,
 };
@@ -52,7 +45,6 @@ use core::fmt::Write;
 
 use esp_backtrace as _;
 use esp_println::println;
-use log::info;
 
 static EXECUTOR: StaticCell<Executor> = StaticCell::new();
 
@@ -114,34 +106,7 @@ fn main() -> ! {
     );
 
     let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
-
-    // let sclk = io.pins.gpio7;
-    // let mosi = io.pins.gpio6;
-    // let mut backlight = io.pins.gpio45.into_push_pull_output();
-    // backlight.set_high().expect("Failed to set backlight high");
-
-    // let spi = spi::Spi::new_no_cs_no_miso(
-    //     peripherals.SPI2,
-    //     sclk,
-    //     mosi,
-    //     60u32.MHz(),
-    //     spi::SpiMode::Mode0,
-    //     &mut system.peripheral_clock_control,
-    //     &clocks,
-    // );
-    
-    // let di = SPIInterfaceNoCS::new(spi, io.pins.gpio4.into_push_pull_output());
-    // let reset = io.pins.gpio48.into_push_pull_output();
-    let mut delay = Delay::new(&clocks);
-
-    // let mut display = mipidsi::Builder::ili9342c_rgb565(di)
-    //     .with_display_size(320, 240)
-    //     .with_orientation(Orientation::PortraitInverted(false))
-    //     .with_color_order(ColorOrder::Bgr)
-    //     .init(&mut delay, Some(reset))
-    //     .expect("Display failed to initialize");
-
-    // display.clear(Rgb565::WHITE).expect("Failed to clear display");
+    let delay = Delay::new(&clocks);
 
     let (wifi, _) = peripherals.RADIO.split();
     let (wifi_interface, controller) =
@@ -375,7 +340,7 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
 
             match client
                 .send_message(
-                    "Temperature/1",
+                    "Temperature",
                     payload,
                     rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
                     true,
