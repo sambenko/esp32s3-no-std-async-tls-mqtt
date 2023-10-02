@@ -329,19 +329,26 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
             let temperature = data.temperature_celsius();
             println!("Current temperature: {}", temperature);
 
+            let pressure = data.pressure_hpa();
+            println!("Current pressure: {}", pressure);
+
+            let humidity = data.humidity_percent();
+            println!("Current humidity: {}", humidity);
+
             // Convert temperature into String
             let mut temperature_string: String<32> = String::new();
             write!(temperature_string, "{:.2}", temperature).expect("write! failed!");
 
-            let payload = temperature_string.as_bytes();
+            let mut pressure_string: String<32> = String::new();
+            write!(pressure_string, "{:.2}", pressure).expect("write! failed!");
 
-            // Print the payload size before sending
-            println!("Sending payload of size: {} bytes", payload.len());
+            let mut humidity_string: String<32> = String::new();
+            write!(humidity_string, "{:.2}", humidity).expect("write! failed!");
 
             match client
                 .send_message(
                     "Temperature",
-                    payload,
+                    temperature_string.as_bytes(),
                     rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
                     true,
                 )
@@ -359,6 +366,52 @@ async fn task(stack: &'static Stack<WifiDevice<'static>>, i2c: I2C<'static, I2C0
                     }
                 },
             }
+
+            match client
+                .send_message(
+                    "Pressure",
+                    pressure_string.as_bytes(),
+                    rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
+                    true,
+                )
+                .await
+            {
+                Ok(()) => {}
+                Err(mqtt_error) => match mqtt_error {
+                    ReasonCode::NetworkError => {
+                        println!("MQTT Network Error");
+                        continue;
+                    }
+                    _ => {
+                        println!("Other MQTT Error: {:?}", mqtt_error);
+                        continue;
+                    }
+                },
+            }
+
+            match client
+                .send_message(
+                    "Humidity",
+                    humidity_string.as_bytes(),
+                    rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
+                    true,
+                )
+                .await
+            {
+                Ok(()) => {}
+                Err(mqtt_error) => match mqtt_error {
+                    ReasonCode::NetworkError => {
+                        println!("MQTT Network Error");
+                        continue;
+                    }
+                    _ => {
+                        println!("Other MQTT Error: {:?}", mqtt_error);
+                        continue;
+                    }
+                },
+            }
+
+
             Timer::after(Duration::from_millis(3000)).await;
         }
     }
