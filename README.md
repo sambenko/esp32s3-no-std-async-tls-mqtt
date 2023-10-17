@@ -79,6 +79,7 @@ Before running the program, make sure your hardware is properly set up.
 
 <br>
 <br>
+
 <a name="setting-up-mqtt"></a>
 ### 2. 🛡️ Setting up MQTT Configuration and Certificates
 
