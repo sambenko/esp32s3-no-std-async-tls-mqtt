@@ -50,9 +50,9 @@ static EXECUTOR: StaticCell<Executor> = StaticCell::new();
 
 const SSID: &str = env!("SSID");
 const PASSWORD: &str = env!("PASSWORD");
-const CERT: &'static str = concat!(include_str!("../secrets/AmazonRootCA1.pem"), "\0");
-const CLIENT_CERT: &'static str = concat!(include_str!("../secrets/VendingMachine.pem.crt"), "\0");
-const PRIVATE_KEY: &'static str = concat!(include_str!("../secrets/VendingMachine-private.pem.key"), "\0");
+const CERT: &'static str = concat!(include_str!("../secrets/rootCA.pem"), "\0");
+const CLIENT_CERT: &'static str = concat!(include_str!("../secrets/client_cert.pem.crt"), "\0");
+const PRIVATE_KEY: &'static str = concat!(include_str!("../secrets/client_private.pem.key"), "\0");
 const ENDPOINT: &'static str = include_str!("../secrets/endpoint.txt");
 const CLIENT_ID: &'static str = include_str!("../secrets/client_id.txt");
 
