@@ -67,14 +67,14 @@ To run this project, you'll need to install the following:
 
 Before running the program, make sure your hardware is properly set up.
 
-1. **Connect the BME680 Sensor to ESP32S3-BOX device:**
+- **Connect the BME680 Sensor to ESP32S3-BOX device:**
    - `SDA` to `G41` on the device
    - `SCL` to `G40` on the device
    - `2-5V` to `3v3` on the device
    - `GND` to `GND` on the device
    > All 4 wires should be next to each other in the end.
    
-2. **Connect the ESP32S3-BOX to your computer**:
+- **Connect the ESP32S3-BOX to your computer**:
    - Use a USB-C cable to establish the connection.
 
 <br>
@@ -83,18 +83,18 @@ Before running the program, make sure your hardware is properly set up.
 <a name="setting-up-mqtt"></a>
 ### 2. 🛡️ Setting up MQTT Configuration and Certificates
 
-#### MQTT Endpoint and Client ID
+#### 2.1 MQTT Endpoint and Client ID
 
-1. **Endpoint Address**: Write your MQTT broker's endpoint address into `endpoint.txt` in the `secrets/` folder.
-2. **Client ID**: If you are using a private broker like AWS MQTT, a client ID is also required. Paste the client ID into `client_id.txt` in the `secrets/` folder.
+- **Endpoint Address**: Write your MQTT broker's endpoint address into `endpoint.txt` in the `secrets/` folder.
+- **Client ID**: If you are using a private broker like AWS MQTT, a client ID is also required. Paste the client ID into `client_id.txt` in the `secrets/` folder.
 
-#### MQTT over TLS
+#### 2.2 MQTT over TLS
 
 If your MQTT broker requires secure connections, you'll need to provide the necessary TLS X.509 certificates:
 
-1. **Trusted Root Certificate**: This is generally needed to verify the broker's identity. Paste the content of your root certificate into a file named `rootCA.pem` in the `secrets/` folder.
-2. **Client Certificate**: This is your device's certificate, which is presented to the broker during the handshake. Save it as `client_cert.pem.crt` in the `secrets/` folder.
-3. **Private Key**: This key matches the client certificate and must be kept private. Save it as `client_private.pem.key` in the `secrets/` folder.
+- **Trusted Root Certificate**: This is generally needed to verify the broker's identity. Paste the content of your root certificate into a file named `rootCA.pem` in the `secrets/` folder.
+- **Client Certificate**: This is your device's certificate, which is presented to the broker during the handshake. Save it as `client_cert.pem.crt` in the `secrets/` folder.
+- **Private Key**: This key matches the client certificate and must be kept private. Save it as `client_private.pem.key` in the `secrets/` folder.
 
 The certificate and key files are read in the code snippet below after crate imports in `src/main.rs`:
 
