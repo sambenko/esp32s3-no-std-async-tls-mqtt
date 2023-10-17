@@ -10,3 +10,6 @@ target/
 *.pdb
 
 .DS_STORE
+
+# exclude any scripts
+*.sh
