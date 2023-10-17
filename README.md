@@ -108,6 +108,10 @@ You can rename the files however you like, but you need to change the paths in c
 > 🚨 Warning: Never commit your secrets and certificates to GitHub or any other public repository. The .gitignore file is set up to ignore these files, but you must also ensure not to manually include them in commits.
 
 <br>
+
+> After setting up these files, you should have 2 tracked changes only, in `client_id.txt` and `endpoint.txt`. Don't commit these!
+
+<br>
 <br>
 
 ### 3. 📶 WiFi Setup and Program Execution
@@ -121,6 +125,7 @@ To set up your WiFi credentials and execute the program, you have two options:
     ```bash
     ./run_with_wifi_credentials.sh
     ```
+    > 🚨 3rd tracked change should appear in VSCode Source Control tab. Again, don't commit any of the 3 changes!
 
 #### Option 2: Manual Setup 🤖
 
