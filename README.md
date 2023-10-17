@@ -16,8 +16,8 @@ Sending MQTT messages containing sensor data from BME680 to any MQTT broker that
 - [🚀 Getting Started](#-getting-started)
   - [1. 🔌 Hardware Setup](#1--hardware-setup)
   - [2. 🛡️ Setting up MQTT Configuration and Certificates](#setting-up-mqtt)
-    - [MQTT Endpoint and Client ID](#mqtt-endpoint-and-client-id)
-    - [MQTT over TLS](#mqtt-over-tls)
+    - [MQTT Endpoint and Client ID](#setting-up-mqtt)
+    - [MQTT over TLS](#setting-up-mqtt)
   - [3. 📶 WiFi Setup and Program Execution](#3--wifi-setup-and-program-execution)
 
 ---
