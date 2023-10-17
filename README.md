@@ -14,8 +14,11 @@ Sending MQTT messages containing sensor data from BME680 to any MQTT broker that
   - [Software Requirements](#software-requirements)
   - [Hardware Requirements](#hardware-requirements)
 - [🚀 Getting Started](#-getting-started)
-  - [🔌 Hardware Setup](#-hardware-setup)
-  - [📶 WiFi Setup and Program Execution](#-wifi-setup-and-program-execution)
+  - [1. 🔌 Hardware Setup](#1--hardware-setup)
+  - [2. 🛡️ Setting up MQTT Configuration and Certificates](#setting-up-mqtt)
+    - [MQTT Endpoint and Client ID](#mqtt-endpoint-and-client-id)
+    - [MQTT over TLS](#mqtt-over-tls)
+  - [3. 📶 WiFi Setup and Program Execution](#3--wifi-setup-and-program-execution)
 
 ---
 
@@ -60,23 +63,53 @@ To run this project, you'll need to install the following:
 
 ## 🚀 Getting Started
 
-### 🔌 Hardware Setup
+### 1. 🔌 Hardware Setup
 
 Before running the program, make sure your hardware is properly set up.
 
 1. **Connect the BME680 Sensor to ESP32S3-BOX device:**
-   - SDA to G41 on the device
-   - SCL to G40 on the device
-   - 2-5V to 3v3 on the device
-   - GND to GND on the device
+   - `SDA` to `G41` on the device
+   - `SCL` to `G40` on the device
+   - `2-5V` to `3v3` on the device
+   - `GND` to `GND` on the device
    > All 4 wires should be next to each other in the end.
    
 2. **Connect the ESP32S3-BOX to your computer**:
    - Use a USB-C cable to establish the connection.
 
 <br>
+<br>
+<a name="setting-up-mqtt"></a>
+### 2. 🛡️ Setting up MQTT Configuration and Certificates
 
-### 📶 WiFi Setup and Program Execution
+#### MQTT Endpoint and Client ID
+
+1. **Endpoint Address**: Write your MQTT broker's endpoint address into `endpoint.txt` in the `secrets/` folder.
+2. **Client ID**: If you are using a private broker like AWS MQTT, a client ID is also required. Paste the client ID into `client_id.txt` in the `secrets/` folder.
+
+#### MQTT over TLS
+
+If your MQTT broker requires secure connections, you'll need to provide the necessary TLS X.509 certificates:
+
+1. **Trusted Root Certificate**: This is generally needed to verify the broker's identity. Paste the content of your root certificate into a file named `rootCA.pem` in the `secrets/` folder.
+2. **Client Certificate**: This is your device's certificate, which is presented to the broker during the handshake. Save it as `client_cert.pem.crt` in the `secrets/` folder.
+3. **Private Key**: This key matches the client certificate and must be kept private. Save it as `client_private.pem.key` in the `secrets/` folder.
+
+The certificate and key files are read in the code snippet below after crate imports in `src/main.rs`:
+
+```rust
+const CERT: &'static str = concat!(include_str!("../secrets/rootCA.pem"), "\0");
+const CLIENT_CERT: &'static str = concat!(include_str!("../secrets/client_cert.pem.crt"), "\0");
+const PRIVATE_KEY: &'static str = concat!(include_str!("../secrets/client_private.pem.key"), "\0");
+```
+
+You can rename the files however you like, but you need to change the paths in consts accordingly.
+> 🚨 Warning: Never commit your secrets and certificates to GitHub or any other public repository. The .gitignore file is set up to ignore these files, but you must also ensure not to manually include them in commits.
+
+<br>
+<br>
+
+### 3. 📶 WiFi Setup and Program Execution
 
 To set up your WiFi credentials and execute the program, you have two options:
 
